@@ -1,0 +1,37 @@
+Initialize a production-ready full-stack monorepo for a "Libyan Financial Terminal".
+Stack: Next.js 15 (Frontend), FastAPI (Backend), PostgreSQL + TimescaleDB (Database), Docker.
+(like bloomberg terminal)
+
+Requirements:
+1. Backend: Implement a 'Scraper Service' using Telethon to listen to specific Libyan Telegram channels (e.g., Ewan, Al-Mushir). Parse price updates (USD/LYD, EUR/LYD) using Regex.
+2. Backend: Implement a 'Sync Service' for the fulus.ly API (v1) to fetch historical daily EOD rates.
+3. Database: Use TimescaleDB hyper-tables for 'tick_data' (Telegram updates) and 'daily_data' (fulus.ly).
+4. Logic: Create a forecasting module using Meta's Prophet to predict next 24h rates and a Buy/Sell signal generator based on RSI and Volume-weighted sentiment.
+5. Frontend: Bloomberg-style high-density dashboard. Use a Dark Theme. Features: Real-time price ticker, candlestick charts (lightweight-charts), news feed from Telegram, and AI Reasoning component showing 'Why' the rate is moving.
+6. Infra: Provide a docker-compose.yml including the DB, Backend, and Frontend.
+
+Generate the project structure and the pyproject.toml / package.json first.
+
+Write a Python class `TelegramPriceScraper` using Telethon.
+- Connect to Telegram using API_ID and API_HASH.
+- Target channels: ['@EwanLibya', '@AlMushir'] (any channel user add)
+- Logic: On new message, use regex to find currency pairs. 
+  Example text: "سعر الدولار الآن: 6.85" or "USD/LYD: 6.85".
+- Handle 'Buy' vs 'Sell' prices if mentioned (e.g., 'شراء' vs 'بيع').
+- Emit data via a WebSocket to the frontend and save to the 'tick_data' table in TimescaleDB.
+- Include a 5-second buffer to prevent rate-limiting.
+
+Create an AnalysisService in FastAPI:
+1. Data: Pull last 30 days from TimescaleDB.
+2. Forecast: Use `prophet` to calculate the expected trend for the next 24/48 hours.
+3. Sentiment: Analyze the frequency of 'high volatility' keywords in the last 100 Telegram messages to generate a 'Market Panic Index'.
+4. Signals: Generate a Buy/Sell recommendation:
+5. AI Reasoning: Use an LLM integration (GPT-4o or Gemini) to summarize the 'reasoning' (e.g., "Rate spiking due to Liquidity crisis at Central Bank mentioned in 5 channels").
+
+Build a React Dashboard component using Tailwind CSS and Shadcn/UI.
+- Layout: 3-column Grid.
+- Left Col: High-frequency scrollable news feed (Telegram messages) with sentiment badges.
+- Center Col: Candlestick chart (LightweightCharts) with a 1m/5m/1h toggle. Overlay the 'Prophet Forecast' as a dotted line.
+- Right Col: 'The Signal Card' - Large Buy/Sell indicator with a progress bar for the 'Market Panic Index'.
+- Top: Horizontal ticker for USD, EUR, Gold, and Tunisian Dinar etc.
+- Mobile: Transform into a simple list view with only the 'Latest Price' and 'AI Reasoning'.
