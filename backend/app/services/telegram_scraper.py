@@ -168,9 +168,14 @@ class TelegramPriceScraper:
             message_id=message_id,
         )
         
-        self.db_session.add(tick)
-        await self.db_session.commit()
-        logger.info(f"Saved tick: {currency_pair} @ {price}")
+        try:
+            self.db_session.add(tick)
+            await self.db_session.commit()
+            logger.info(f"Saved tick: {currency_pair} @ {price}")
+        except Exception as e:
+            await self.db_session.rollback()
+            logger.error(f"Error saving tick data: {e}", exc_info=True)
+            raise
         
     async def save_message(
         self,
@@ -191,8 +196,13 @@ class TelegramPriceScraper:
             contains_price=contains_price,
         )
         
-        self.db_session.add(message)
-        await self.db_session.commit()
+        try:
+            self.db_session.add(message)
+            await self.db_session.commit()
+        except Exception as e:
+            await self.db_session.rollback()
+            logger.error(f"Error saving message: {e}", exc_info=True)
+            raise
         
     async def handle_message(self, event):
         """Handle incoming Telegram message."""

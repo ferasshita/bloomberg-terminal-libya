@@ -73,6 +73,10 @@ class FulusSyncService:
         logger.info(f"Fetching rates for {currency_pair} from {start_date} to {end_date}")
         
         try:
+            headers = {}
+            if settings.FULUS_LY_API_KEY:
+                headers["X-API-Key"] = settings.FULUS_LY_API_KEY
+
             async with httpx.AsyncClient() as client:
                 # Example API endpoint (adjust based on actual API)
                 response = await client.get(
@@ -82,6 +86,7 @@ class FulusSyncService:
                         "start": start_date.strftime("%Y-%m-%d"),
                         "end": end_date.strftime("%Y-%m-%d"),
                     },
+                    headers=headers,
                     timeout=30.0
                 )
                 
