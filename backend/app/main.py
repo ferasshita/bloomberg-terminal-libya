@@ -63,20 +63,24 @@ async def start_background_services():
     """Start background services."""
     global telegram_scraper, fulus_sync
     
-    # Initialize Telegram scraper
-    telegram_scraper = TelegramPriceScraper(
-        api_id=settings.TELEGRAM_API_ID,
-        api_hash=settings.TELEGRAM_API_HASH,
-        phone=settings.TELEGRAM_PHONE,
-        session_name=settings.TELEGRAM_SESSION_NAME,
-        channels=settings.TELEGRAM_CHANNELS,
-    )
-    
-    # Set WebSocket callback
-    telegram_scraper.set_websocket_callback(ws_manager.send_price_update)
-    
-    # Start scraper in background
-    asyncio.create_task(run_telegram_scraper())
+    # Initialize Telegram scraper only if credentials are provided
+    if settings.TELEGRAM_API_ID and settings.TELEGRAM_API_HASH:
+        telegram_scraper = TelegramPriceScraper(
+            api_id=settings.TELEGRAM_API_ID,
+            api_hash=settings.TELEGRAM_API_HASH,
+            phone=settings.TELEGRAM_PHONE,
+            session_name=settings.TELEGRAM_SESSION_NAME,
+            channels=settings.TELEGRAM_CHANNELS,
+        )
+        
+        # Set WebSocket callback
+        telegram_scraper.set_websocket_callback(ws_manager.send_price_update)
+        
+        # Start scraper in background
+        asyncio.create_task(run_telegram_scraper())
+        logger.info("Telegram scraper started")
+    else:
+        logger.warning("TELEGRAM_API_ID/TELEGRAM_API_HASH not set. Telegram scraper will be disabled.")
     
     # Initialize Fulus sync service
     fulus_sync = FulusSyncService()

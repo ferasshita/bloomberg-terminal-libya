@@ -16,15 +16,15 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/libyan_terminal"
     
-    # Telegram
-    TELEGRAM_API_ID: str
-    TELEGRAM_API_HASH: str
+    # Telegram (optional at boot; scraper will be disabled if missing)
+    TELEGRAM_API_ID: Optional[str] = None
+    TELEGRAM_API_HASH: Optional[str] = None
     TELEGRAM_PHONE: Optional[str] = None
     TELEGRAM_SESSION_NAME: str = "libyan_terminal_session"
     TELEGRAM_CHANNELS: list[str] = ["@EwanLibya", "@AlMushir"]
     
-    # OpenAI
-    OPENAI_API_KEY: str
+    # OpenAI (optional; AI features disabled if missing)
+    OPENAI_API_KEY: Optional[str] = None
     OPENAI_MODEL: str = "gpt-4o"
     
     # Fulus.ly API

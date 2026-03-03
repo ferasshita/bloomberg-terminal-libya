@@ -2,13 +2,19 @@
 FROM node:20-alpine AS base
 
 # Install dependencies only when needed
-FROM base AS deps
+# Frontend Dockerfile - deps stage
+FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
-RUN npm ci
+# Install Bun
+RUN npm install -g bun
 
+# Copy ONLY package.json
+COPY package.json ./
+
+# Use Bun to install (This ignores your expired npm tokens)
+RUN bun install
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
@@ -30,7 +36,6 @@ ENV NEXT_TELEMETRY_DISABLED 1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-COPY --from=builder /app/public ./public
 
 # Set the correct permission for prerender cache
 RUN mkdir .next

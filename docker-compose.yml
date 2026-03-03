@@ -42,7 +42,7 @@ services:
       - terminal_network
     volumes:
       - ./backend/app:/app/app
-      - telegram_sessions:/app
+      - telegram_sessions:/app/sessions
     restart: unless-stopped
 
   # Frontend (Next.js)

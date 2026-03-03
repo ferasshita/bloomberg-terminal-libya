@@ -55,20 +55,22 @@ class DailyData(Base):
 
 class TelegramMessage(Base):
     """Model for storing all Telegram messages for sentiment analysis."""
-    
+
     __tablename__ = "telegram_messages"
-    
+
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    # Keep index=True here, it's the modern SQLAlchemy way
     timestamp: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
     channel: Mapped[str] = mapped_column(String(100), nullable=False)
     message_id: Mapped[int] = mapped_column(Integer, nullable=False)
     text: Mapped[str] = mapped_column(Text, nullable=False)
     sentiment_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    contains_price: Mapped[bool] = mapped_column(Integer, default=0)  # SQLite compatible
-    
-    __table_args__ = (
-        Index('ix_telegram_messages_timestamp', 'timestamp'),
-    )
-    
+    contains_price: Mapped[bool] = mapped_column(Integer, default=0)
+
+    # REMOVE OR COMMENT OUT THE ENTIRE __table_args__ BLOCK BELOW
+    # __table_args__ = (
+    #     Index('ix_telegram_messages_timestamp', 'timestamp'),
+    # )
+
     def __repr__(self) -> str:
         return f"<TelegramMessage(id={self.id}, channel={self.channel})>"
