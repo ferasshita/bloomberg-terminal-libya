@@ -65,3 +65,6 @@ disallow_untyped_defs = false
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = [
+    "integration: marks tests that hit live external APIs (deselect with -m 'not integration')",
+]
