@@ -30,13 +30,15 @@ class TelegramPriceScraper:
     
     # Regex patterns for price matching
     PRICE_PATTERNS = [
-        # Arabic patterns
-        r'(?:سعر|صرف)\s*(?:الدولار|اليورو|USD|EUR)\s*(?:الآن)?\s*:?\s*(\d+\.?\d*)',
-        r'(USD|EUR)/LYD\s*:?\s*(\d+\.?\d*)',
-        r'(?:الدولار|اليورو)\s*(?:بـ)?\s*(\d+\.?\d*)',
-        # English patterns
-        r'USD\s*(?:rate|price)?\s*:?\s*(\d+\.?\d*)',
-        r'EUR\s*(?:rate|price)?\s*:?\s*(\d+\.?\d*)',
+        # Arabic patterns – buy/sell keyword may appear between currency and price
+        r'(?:سعر|صرف)\s*(?:الدولار|اليورو|USD|EUR)\s*(?:الآن|شراء|بيع)?\s*:?\s*(\d+\.?\d*)',
+        r'(?:الدولار|اليورو)\s*(?:بـ|شراء|بيع)?\s*(\d+\.?\d*)',
+        # English pair notation – optional buy/sell/bid/ask label
+        r'(USD|EUR)/LYD\s*:?\s*(?:buy|sell|bid|ask|buying|selling)?\s*(\d+\.?\d*)',
+        # English standalone keywords
+        r'USD\s*(?:rate|price|buy|sell)?\s*:?\s*(\d+\.?\d*)',
+        r'EUR\s*(?:rate|price|buy|sell)?\s*:?\s*(\d+\.?\d*)',
+        # Price followed by currency
         r'(\d+\.?\d*)\s*(?:LYD|دينار)',
     ]
     
@@ -114,29 +116,40 @@ class TelegramPriceScraper:
         for pattern in self.PRICE_PATTERNS:
             match = re.search(pattern, text, re.IGNORECASE)
             if match:
-                # Get the last group (the price number)
+                # Some patterns capture a leading currency code as group 1 and
+                # the price as the final group (e.g. "(USD|EUR)/LYD … (\d+…)").
+                # Using groups[-1] always selects the price regardless of how
+                # many groups the pattern has.
                 groups = match.groups()
-                price_str = groups[-1] if len(groups) > 0 else groups[0]
+                price_str = groups[-1] if groups else None
+                if price_str is None:
+                    continue
                 try:
                     price = float(price_str)
                     break
-                except (ValueError, IndexError):
+                except ValueError:
                     continue
         
         if not price or price <= 0 or price > 100:  # Sanity check
             return None
         
-        # Determine buy/sell
-        price_type = "mid"  # Default
-        for keyword in self.BUY_KEYWORDS:
-            if keyword in text_lower:
-                price_type = "buy"
-                break
-        
-        for keyword in self.SELL_KEYWORDS:
-            if keyword in text_lower:
-                price_type = "sell"
-                break
+        # Determine buy/sell: use whichever keyword appears first in the text
+        # so "شراء 6.80 بيع 6.90" is correctly labelled "buy".
+        buy_pos = min(
+            (text_lower.find(kw) for kw in self.BUY_KEYWORDS if kw in text_lower),
+            default=-1,
+        )
+        sell_pos = min(
+            (text_lower.find(kw) for kw in self.SELL_KEYWORDS if kw in text_lower),
+            default=-1,
+        )
+
+        if buy_pos >= 0 and (sell_pos < 0 or buy_pos < sell_pos):
+            price_type = "buy"
+        elif sell_pos >= 0 and (buy_pos < 0 or sell_pos < buy_pos):
+            price_type = "sell"
+        else:
+            price_type = "mid"
         
         return {
             "currency_pair": currency_pair,
@@ -168,9 +181,14 @@ class TelegramPriceScraper:
             message_id=message_id,
         )
         
-        self.db_session.add(tick)
-        await self.db_session.commit()
-        logger.info(f"Saved tick: {currency_pair} @ {price}")
+        try:
+            self.db_session.add(tick)
+            await self.db_session.commit()
+            logger.info(f"Saved tick: {currency_pair} @ {price}")
+        except Exception as e:
+            await self.db_session.rollback()
+            logger.error(f"Error saving tick data: {e}", exc_info=True)
+            raise
         
     async def save_message(
         self,
@@ -191,8 +209,13 @@ class TelegramPriceScraper:
             contains_price=contains_price,
         )
         
-        self.db_session.add(message)
-        await self.db_session.commit()
+        try:
+            self.db_session.add(message)
+            await self.db_session.commit()
+        except Exception as e:
+            await self.db_session.rollback()
+            logger.error(f"Error saving message: {e}", exc_info=True)
+            raise
         
     async def handle_message(self, event):
         """Handle incoming Telegram message."""

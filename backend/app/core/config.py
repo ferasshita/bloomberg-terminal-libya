@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     TELEGRAM_API_ID: Optional[str] = None
     TELEGRAM_API_HASH: Optional[str] = None
     TELEGRAM_PHONE: Optional[str] = None
-    TELEGRAM_SESSION_NAME: str = "libyan_terminal_session"
+    TELEGRAM_SESSION_NAME: str = "sessions/libyan_terminal_session"
     TELEGRAM_CHANNELS: list[str] = ["@EwanLibya", "@AlMushir"]
     
     # OpenAI (optional; AI features disabled if missing)
@@ -29,6 +29,8 @@ class Settings(BaseSettings):
     
     # Fulus.ly API
     FULUS_API_URL: str = "https://api.fulus.ly/v1"
+    FULUS_LY_API_KEY: Optional[str] = None
+    FULUS_SYNC_INTERVAL_HOURS: int = 24
     
     # WebSocket
     WS_HEARTBEAT_INTERVAL: int = 30

@@ -112,18 +112,28 @@ async def run_initial_sync():
             await fulus_sync.set_db_session(session)
             await fulus_sync.sync_all()
             
-        # Start periodic sync
-        asyncio.create_task(run_periodic_sync())
     except Exception as e:
         logger.error(f"Error in initial sync: {e}", exc_info=True)
+    finally:
+        # Start periodic sync after initial sync completes (session is closed here)
+        asyncio.create_task(run_periodic_sync())
 
 
 async def run_periodic_sync():
     """Run periodic sync of historical data."""
-    try:
-        await fulus_sync.run_periodic_sync(interval_hours=24)
-    except Exception as e:
-        logger.error(f"Error in periodic sync: {e}", exc_info=True)
+    from app.core.database import AsyncSessionLocal
+
+    while True:
+        try:
+            logger.info("Starting periodic sync")
+            async with AsyncSessionLocal() as session:
+                await fulus_sync.set_db_session(session)
+                await fulus_sync.sync_all()
+            logger.info("Periodic sync completed")
+        except Exception as e:
+            logger.error(f"Error in periodic sync: {e}", exc_info=True)
+        # Wait before the next sync
+        await asyncio.sleep(settings.FULUS_SYNC_INTERVAL_HOURS * 3600)
 
 
 @asynccontextmanager
